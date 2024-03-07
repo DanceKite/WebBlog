@@ -1,0 +1,28 @@
+app:
+  name: "web_app"
+  mode: "development"
+  port: 8081
+
+
+log:
+  level: "debug"
+  filename: "webapp.log"
+  max_size: 200
+  max_backups: 7
+  max_age: 30
+
+mysql:
+    host: "192.168.47.130"
+    port: 3306
+    user: "root"
+    password: "123456"
+    dbname: "sql_demo"
+    max_open_conns: 200
+    max_idle_conns: 50
+
+redis:
+    host: "192.168.47.130"
+    port: 6379
+    db: 0
+    password: "abc123456."
+    pool_size: 100
