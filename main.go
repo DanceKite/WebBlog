@@ -1,6 +1,13 @@
 package main
 
 import (
+	"WebBlog/controller"
+	"WebBlog/dao/mysql"
+	"WebBlog/dao/redis"
+	"WebBlog/logger"
+	"WebBlog/pkg/snowflake"
+	"WebBlog/router"
+	"WebBlog/settings"
 	"context"
 	"fmt"
 	"net/http"
@@ -8,11 +15,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"web_app/dao/mysql"
-	"web_app/dao/redis"
-	"web_app/logger"
-	"web_app/routes"
-	"web_app/settings"
 
 	"github.com/spf13/viper"
 
@@ -45,8 +47,25 @@ func main() {
 		return
 	}
 	defer redis.Close()
+
+	if err := snowflake.Init(settings.Conf.StartTime, settings.Conf.MachineID); err != nil {
+		fmt.Printf("init snowflake failed, err:%v\n", err)
+		return
+	}
+
+	//初始化gin内置的校验器使用的翻译器
+	if err := controller.InitTrans("zh"); err != nil {
+		fmt.Printf("init validator trans failed, err:%v\n", err)
+		return
+	}
+
 	//4.注册路由
-	r := routes.Setup()
+	r := router.Setup()
+	if err := r.Run(fmt.Sprintf(":%d", settings.Conf.Port)); err != nil {
+		fmt.Printf("run server failed, err:%v\n", err)
+		return
+	}
+
 	//5.启动服务（优雅关机）
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", viper.GetInt("app.port")),
