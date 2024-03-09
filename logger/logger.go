@@ -45,7 +45,7 @@ func main() {
 	})
 	r.Run()
 }
-func Init(cfg *settings.LogConfig) (err error) {
+func Init(cfg *settings.LogConfig, mode string) (err error) {
 	writeSyncer := getLogWriter(
 		cfg.Filename,
 		cfg.MaxSize,
@@ -58,7 +58,18 @@ func Init(cfg *settings.LogConfig) (err error) {
 	if err != nil {
 		return
 	}
-	core := zapcore.NewCore(encode, writeSyncer, zapcore.DebugLevel)
+	var core zapcore.Core
+	if mode == "dev" {
+		// 开发模式，日志输出到终端
+		consoleEncoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+		core = zapcore.NewTee(
+			zapcore.NewCore(encode, writeSyncer, l),
+			zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), zapcore.DebugLevel),
+		)
+	} else {
+		// 生产模式，日志输出到文件
+		core = zapcore.NewCore(encode, writeSyncer, l)
+	}
 
 	lg := zap.New(core, zap.AddCaller())
 

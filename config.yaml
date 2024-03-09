@@ -1,5 +1,5 @@
 name: "WebBlog"
-mode: "development"
+mode: "dev"
 version: "v0.0.1"
 start_time: "2024-03-01"
 machine_id: 1
