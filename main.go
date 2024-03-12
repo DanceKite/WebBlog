@@ -24,8 +24,12 @@ import (
 // GoWeb开发较通用的脚手架
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("need a config file")
+		return
+	}
 	//1.加载配置
-	if err := settings.Init(); err != nil {
+	if err := settings.Init(os.Args[1]); err != nil {
 		fmt.Printf("init settings failed, err:%v\n", err)
 		return
 	}

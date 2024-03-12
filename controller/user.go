@@ -1,13 +1,14 @@
 package controller
 
 import (
+	"WebBlog/dao/mysql"
 	"WebBlog/logic"
 	"WebBlog/models"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 func SignUpHandler(ctx *gin.Context) {
@@ -19,14 +20,10 @@ func SignUpHandler(ctx *gin.Context) {
 		//判断err是不是validator.ValidationErrors类型
 		errs, ok := err.(validator.ValidationErrors)
 		if !ok {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
+			ResponseError(ctx, CodeInvalidParam)
 			return
 		}
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"msg": removeTopStruct(errs.Translate(trans)),
-		})
+		ResponseErrorWithMsg(ctx, CodeInvalidParam, removeTopStruct(errs.Translate(trans)))
 		return
 	}
 
@@ -43,13 +40,14 @@ func SignUpHandler(ctx *gin.Context) {
 	// 2. 业务处理
 	if err := logic.SignUp(p); err != nil {
 		zap.L().Error("logic.SignUp failed", zap.Error(err))
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"msg": "注册失败",
-		})
+		if errors.Is(err, mysql.ErrorUserExist) {
+			ResponseError(ctx, CodeUserExist)
+		}
+		ResponseError(ctx, CodeServerBusy)
 		return
 	}
 	// 3. 返回响应
-	ctx.JSON(http.StatusOK, "ok")
+	ResponseSuccess(ctx, nil)
 }
 
 func LoginHandler(ctx *gin.Context) {
@@ -61,27 +59,26 @@ func LoginHandler(ctx *gin.Context) {
 		//判断err是不是validator.ValidationErrors类型
 		errs, ok := err.(validator.ValidationErrors)
 		if !ok {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
+			ResponseError(ctx, CodeInvalidParam)
 			return
 		}
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"msg": removeTopStruct(errs.Translate(trans)), //翻译错误
-		})
+		ResponseErrorWithMsg(ctx, CodeInvalidParam, removeTopStruct(errs.Translate(trans)))
 		return
 	}
 	// 2. 业务逻辑处理
-	if err := logic.Login(p); err != nil {
+	user, err := logic.Login(p)
+	if err != nil {
 		zap.L().Error("logic.Login failed", zap.String("username", p.Username), zap.Error(err))
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"msg":   "登陆失败",
-			"error": err.Error(),
-		})
+		if errors.Is(err, mysql.ErrorUserNotExist) {
+			ResponseError(ctx, CodeUserNotExist)
+		}
+		ResponseError(ctx, CodeInvalidPassword)
 		return
 	}
 	// 3. 返回响应
-	ctx.JSON(http.StatusOK, gin.H{
-		"msg": "登陆成功",
+	ResponseSuccess(ctx, gin.H{
+		"user_id":   fmt.Sprintf("%d", user.UserID), //id值大于1<<53-1时，json序列化会丢失精度
+		"user_name": user.Username,
+		"token":     user.Token,
 	})
 }
