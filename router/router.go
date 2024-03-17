@@ -6,7 +6,6 @@ import (
 	"WebBlog/middlewares"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
 )
 
 func Setup(mode string) *gin.Engine {
@@ -14,8 +13,8 @@ func Setup(mode string) *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.New()
-	r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 1))
-
+	//r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 1))
+	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 	v1 := r.Group("/api/v1")
 
 	// 注册
@@ -24,6 +23,12 @@ func Setup(mode string) *gin.Engine {
 	v1.POST("/login", controller.LoginHandler)
 
 	v1.Use(middlewares.JWTAuthMiddleware()) // 使用JWT认证中间件
+
+	r.LoadHTMLFiles("./templates/index.html")
+	r.Static("./static", "static")
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "index.html", nil)
+	})
 
 	{
 		v1.GET("/community", controller.CommunityHandler)
