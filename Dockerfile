@@ -16,15 +16,23 @@ COPY . .
 
 RUN go build -o webblog_app .
 
+# 创建一个小小镜像
+FROM debian:buster-slim
 
-FROM scratch
-
+COPY ./wait-for.sh /
 COPY ./templates /templates
 COPY ./static /static
 COPY ./conf /conf
 
 COPY --from=builder /build/webblog_app /
 
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y \
+        --no-install-recommends \
+        netcat; \
+        chmod 755 wait-for.sh
 
-ENTRYPOINT ["/webblog_app","conf/config.yaml"]
+
+#ENTRYPOINT ["/webblog_app","conf/config.yaml"]
 
